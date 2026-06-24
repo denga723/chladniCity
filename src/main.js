@@ -4,6 +4,7 @@ import { createInterface } from "./ui.js";
 import { WebGPUChladniRenderer } from "./renderers/webgpuParticles.js";
 import { WebGLFallbackRenderer } from "./renderers/webglFallback.js";
 import { CityRenderer } from "./renderers/cityMassing.js";
+import { createStylizer } from "./ai/stylize.js";
 
 const DEFAULT_FREQUENCY = 1820;
 const DEFAULT_PARTICLE_COUNT = 300000;
@@ -47,6 +48,7 @@ const audio = createAudioController(appState.frequencyHz);
 
 let activeRenderer = null;
 let ui = null;
+let stylizer = null;
 const rendererParticleCounts = {
   [WEBGPU_RENDERER]: DEFAULT_PARTICLE_COUNT,
   [WEBGL_RENDERER]: FALLBACK_PARTICLE_CAP
@@ -138,7 +140,14 @@ async function startApp() {
     onCityInvertChange: (invert) => {
       appState.city.invert = Boolean(invert);
       activeRenderer?.setInvert?.(appState.city.invert);
+    },
+    onStylize: () => {
+      stylizer?.open();
     }
+  });
+
+  stylizer = createStylizer(root, {
+    getFrame: () => activeRenderer?.captureFrame?.(1024) ?? null
   });
 
   activeRenderer = await createAndInitRenderer(ui.sceneRoot, appState, WEBGPU_RENDERER);

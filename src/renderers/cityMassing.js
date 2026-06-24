@@ -46,7 +46,11 @@ export class CityRenderer {
     this.camera.position.set(6.5, 6.0, 6.5);
     this.camera.lookAt(0, 0, 0);
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance",
+      preserveDrawingBuffer: true // needed so captureFrame() can read the canvas
+    });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.container.append(this.renderer.domElement);
 
@@ -193,6 +197,31 @@ export class CityRenderer {
   setInvert(b) {
     this.invert = !!b;
     this.computeTargetHeights();
+  }
+
+  // Render the current massing from a fixed ~30° elevation camera and return a
+  // PNG data URL. Used by the AI stylize panel. Restores the live view after.
+  captureFrame(size = 1024) {
+    const r = this.renderer;
+    const prevSize = new THREE.Vector2();
+    r.getSize(prevSize);
+
+    const elev = (30 * Math.PI) / 180;
+    const az = Math.PI * 0.25;
+    const dist = 10.5;
+    const horiz = Math.cos(elev) * dist;
+    const cam = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+    cam.position.set(Math.cos(az) * horiz, Math.sin(elev) * dist, Math.sin(az) * horiz);
+    cam.lookAt(0, 0.5, 0);
+
+    r.setSize(size, size, false);
+    r.render(this.scene, cam);
+    const url = r.domElement.toDataURL("image/png");
+
+    // Restore the on-screen size + camera so the next frame is unaffected.
+    r.setSize(prevSize.x, prevSize.y, false);
+    r.render(this.scene, this.camera);
+    return url;
   }
 
   // --- Particle-renderer lifecycle no-ops (kept so the shared swap logic in

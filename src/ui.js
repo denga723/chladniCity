@@ -119,6 +119,9 @@ export function createInterface(root, initialState, handlers) {
           <div class="full-row">
             <button class="secondary-button" id="city-invert" type="button" aria-pressed="${initialState.city.invert}">${formatCityInvertLabel(initialState.city.invert)}</button>
           </div>
+          <div class="full-row">
+            <button class="mute-button" id="city-stylize" type="button">AI Stylize ✨</button>
+          </div>
         </div>
         <button class="mute-button" id="mute-button" type="button" aria-pressed="${!initialState.muted}">
           <span id="mute-label">${initialState.muted ? "Unmute Tone" : "Mute Tone"}</span>
@@ -158,6 +161,7 @@ export function createInterface(root, initialState, handlers) {
   const cityBandWidthSlider = root.querySelector("#city-band-width");
   const cityBandWidthOutput = root.querySelector("#city-band-width-output");
   const cityInvertButton = root.querySelector("#city-invert");
+  const cityStylizeButton = root.querySelector("#city-stylize");
   const muteButton = root.querySelector("#mute-button");
   const muteLabel = root.querySelector("#mute-label");
   const rendererStatus = root.querySelector("#renderer-status");
@@ -336,6 +340,10 @@ export function createInterface(root, initialState, handlers) {
     cityInvert = !cityInvert;
     updateCityInvertVisual();
     handlers.onCityInvertChange?.(cityInvert);
+  });
+
+  cityStylizeButton.addEventListener("click", () => {
+    handlers.onStylize?.();
   });
 
   muteButton.addEventListener("click", async () => {
