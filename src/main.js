@@ -3,6 +3,7 @@ import { createAudioController } from "./audio.js";
 import { createInterface } from "./ui.js";
 import { WebGPUChladniRenderer } from "./renderers/webgpuParticles.js";
 import { WebGLFallbackRenderer } from "./renderers/webglFallback.js";
+import { CityRenderer } from "./renderers/cityMassing.js";
 
 const DEFAULT_FREQUENCY = 1820;
 const DEFAULT_PARTICLE_COUNT = 300000;
@@ -13,6 +14,17 @@ const DEFAULT_PARTICLE_BLUR = 0.05;
 const FALLBACK_PARTICLE_CAP = 50000;
 const WEBGPU_RENDERER = "webgpu";
 const WEBGL_RENDERER = "webgl";
+const CITY_RENDERER = "city";
+
+const DEFAULT_CITY = {
+  grid: 96,
+  lotFill: 0.82,
+  heightScale: 2.4,
+  bandWidth: 0.35,
+  baseHeight: 0.06,
+  invert: false,
+  morphSpeed: 6.0
+};
 
 const appState = {
   frequencyHz: DEFAULT_FREQUENCY,
@@ -23,7 +35,9 @@ const appState = {
   particleBlur: DEFAULT_PARTICLE_BLUR,
   muted: true,
   rendererMode: "WebGPU",
-  isFallback: false
+  isFallback: false,
+  view: WEBGPU_RENDERER,
+  city: { ...DEFAULT_CITY }
 };
 
 const root = document.querySelector("#app");
@@ -99,6 +113,31 @@ async function startApp() {
     onRendererToggle: async () => {
       const nextRenderer = appState.isFallback ? WEBGPU_RENDERER : WEBGL_RENDERER;
       await switchRenderer(nextRenderer);
+    },
+    onViewChange: async (mode) => {
+      const nextView = normalizeView(mode);
+      if (nextView === appState.view) return;
+      await switchRenderer(nextView);
+    },
+    onCityGridChange: (grid) => {
+      appState.city.grid = Number(grid);
+      activeRenderer?.setGrid?.(appState.city.grid);
+    },
+    onCityLotFillChange: (lotFill) => {
+      appState.city.lotFill = Number(lotFill);
+      activeRenderer?.setLotFill?.(appState.city.lotFill);
+    },
+    onCityHeightChange: (heightScale) => {
+      appState.city.heightScale = Number(heightScale);
+      activeRenderer?.setHeightScale?.(appState.city.heightScale);
+    },
+    onCityBandWidthChange: (bandWidth) => {
+      appState.city.bandWidth = Number(bandWidth);
+      activeRenderer?.setBandWidth?.(appState.city.bandWidth);
+    },
+    onCityInvertChange: (invert) => {
+      appState.city.invert = Boolean(invert);
+      activeRenderer?.setInvert?.(appState.city.invert);
     }
   });
 
@@ -114,6 +153,7 @@ async function startApp() {
   ui.updateParticleSize(appState.particleSize);
   ui.updateParticleOffset(appState.particleOffset);
   ui.updateParticleBlur(appState.particleBlur);
+  ui.updateView?.(appState.view);
 
   window.chladniApp = {
     state: appState,
@@ -153,30 +193,81 @@ async function startApp() {
     },
     async setRendererMode(rendererMode) {
       await switchRenderer(rendererMode === WEBGL_RENDERER ? WEBGL_RENDERER : WEBGPU_RENDERER);
+    },
+    async setView(mode) {
+      const nextView = normalizeView(mode);
+      if (nextView === appState.view) return;
+      await switchRenderer(nextView);
+      ui.updateView?.(appState.view);
+    },
+    setCityGrid(grid) {
+      appState.city.grid = Number(grid);
+      ui.updateCityGrid?.(appState.city.grid);
+      activeRenderer?.setGrid?.(appState.city.grid);
+    },
+    setCityLotFill(lotFill) {
+      appState.city.lotFill = Number(lotFill);
+      ui.updateCityLotFill?.(appState.city.lotFill);
+      activeRenderer?.setLotFill?.(appState.city.lotFill);
+    },
+    setCityHeight(heightScale) {
+      appState.city.heightScale = Number(heightScale);
+      ui.updateCityHeight?.(appState.city.heightScale);
+      activeRenderer?.setHeightScale?.(appState.city.heightScale);
+    },
+    setCityBandWidth(bandWidth) {
+      appState.city.bandWidth = Number(bandWidth);
+      ui.updateCityBandWidth?.(appState.city.bandWidth);
+      activeRenderer?.setBandWidth?.(appState.city.bandWidth);
+    },
+    setCityInvert(invert) {
+      appState.city.invert = Boolean(invert);
+      ui.updateCityInvert?.(appState.city.invert);
+      activeRenderer?.setInvert?.(appState.city.invert);
     }
   };
 }
 
+function normalizeView(mode) {
+  if (mode === WEBGL_RENDERER) return WEBGL_RENDERER;
+  if (mode === CITY_RENDERER) return CITY_RENDERER;
+  return WEBGPU_RENDERER;
+}
+
 async function switchRenderer(rendererMode) {
-  rendererParticleCounts[getActiveRendererKey()] = appState.particleCount;
+  if (appState.view !== CITY_RENDERER) {
+    rendererParticleCounts[getActiveRendererKey()] = appState.particleCount;
+  }
   activeRenderer?.dispose();
   ui.sceneRoot.innerHTML = "";
 
   activeRenderer = await createAndInitRenderer(ui.sceneRoot, appState, rendererMode);
   activeRenderer.updateFrequency(appState.frequencyHz);
-  activeRenderer.setParticleSpeed(appState.particleSpeed);
-  activeRenderer.setParticleSize(appState.particleSize);
-  activeRenderer.setParticleOffset(appState.particleOffset);
-  activeRenderer.setParticleBlur(appState.particleBlur);
+  // Particle setters are no-ops on the City renderer; guard with ?. all the same.
+  activeRenderer.setParticleSpeed?.(appState.particleSpeed);
+  activeRenderer.setParticleSize?.(appState.particleSize);
+  activeRenderer.setParticleOffset?.(appState.particleOffset);
+  activeRenderer.setParticleBlur?.(appState.particleBlur);
   ui.updateStatus(appState.rendererMode, appState.isFallback);
   ui.updateParticleCount(appState.particleCount);
+  ui.updateView?.(appState.view);
 }
 
 async function createAndInitRenderer(container, state, preferredRenderer) {
+  if (preferredRenderer === CITY_RENDERER) {
+    state.view = CITY_RENDERER;
+    state.rendererMode = "City";
+    state.isFallback = false;
+    const cityRenderer = new CityRenderer(container, state);
+    await cityRenderer.init();
+    return cityRenderer;
+  }
+
   if (preferredRenderer === WEBGPU_RENDERER && navigator.gpu) {
     try {
       state.rendererMode = "WebGPU";
       state.isFallback = false;
+      state.view = WEBGPU_RENDERER;
       state.particleCount = rendererParticleCounts[WEBGPU_RENDERER];
       const renderer = new WebGPUChladniRenderer(container, state);
       await renderer.init();
@@ -189,6 +280,7 @@ async function createAndInitRenderer(container, state, preferredRenderer) {
 
   state.rendererMode = "WebGL2";
   state.isFallback = true;
+  state.view = WEBGL_RENDERER;
   state.particleCount = rendererParticleCounts[WEBGL_RENDERER];
   const fallbackRenderer = new WebGLFallbackRenderer(container, state);
   await fallbackRenderer.init();

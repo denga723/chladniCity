@@ -260,6 +260,61 @@ input {
   gap: 10px;
 }
 
+.view-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.view-controls[hidden] {
+  display: none;
+}
+
+.view-selector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.view-button {
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.045);
+  cursor: pointer;
+  font: inherit;
+}
+
+.view-button:hover {
+  border-color: rgba(245, 177, 27, 0.42);
+  color: #fff7df;
+}
+
+.view-button.is-active {
+  border-color: var(--amber);
+  color: #0e0c05;
+  background: var(--amber);
+}
+
+.view-button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.full-row {
+  display: grid;
+}
+
+.secondary-button.is-active {
+  border-color: var(--amber);
+  color: #fff7df;
+  background: rgba(245, 177, 27, 0.12);
+}
+
 .mute-button {
   display: inline-flex;
   align-items: center;

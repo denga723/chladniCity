@@ -37,48 +37,88 @@ export function createInterface(root, initialState, handlers) {
             <span>Hz</span>
           </div>
         </div>
+        <div class="section-heading">View</div>
+        <div class="view-selector" id="view-selector" role="group" aria-label="View mode">
+          <button class="view-button" type="button" data-view="webgpu">Sand · GPU</button>
+          <button class="view-button" type="button" data-view="webgl">Sand · CPU</button>
+          <button class="view-button" type="button" data-view="city">City</button>
+        </div>
         <div class="section-heading">Presets</div>
         <div class="preset-strip" id="preset-strip" aria-label="Frequency presets">
           ${PATTERN_MODES.map((mode) => `<button class="preset-button" type="button" data-frequency="${mode.frequency}">${mode.frequency}</button>`).join("")}
         </div>
-        <div class="particle-control">
-          <div class="control-row">
-            <label for="particle-count">Particles</label>
-            <output id="particle-count-output">${formatParticleCount(initialState.particleCount)}</output>
+        <div id="sand-controls" class="view-controls">
+          <div class="particle-control">
+            <div class="control-row">
+              <label for="particle-count">Particles</label>
+              <output id="particle-count-output">${formatParticleCount(initialState.particleCount)}</output>
+            </div>
+            <input id="particle-count" class="particle-slider" type="range" min="${MIN_PARTICLES}" max="${WEBGPU_MAX_PARTICLES}" step="5000" value="${initialState.particleCount}" />
           </div>
-          <input id="particle-count" class="particle-slider" type="range" min="${MIN_PARTICLES}" max="${WEBGPU_MAX_PARTICLES}" step="5000" value="${initialState.particleCount}" />
-        </div>
-        <div class="range-control">
-          <div class="control-row">
-            <label for="particle-speed">Speed</label>
-            <output id="particle-speed-output">${formatParticleSpeed(initialState.particleSpeed)}</output>
+          <div class="range-control">
+            <div class="control-row">
+              <label for="particle-speed">Speed</label>
+              <output id="particle-speed-output">${formatParticleSpeed(initialState.particleSpeed)}</output>
+            </div>
+            <input id="particle-speed" class="control-slider" type="range" min="${MIN_PARTICLE_SPEED}" max="${MAX_PARTICLE_SPEED}" step="0.05" value="${initialState.particleSpeed}" />
           </div>
-          <input id="particle-speed" class="control-slider" type="range" min="${MIN_PARTICLE_SPEED}" max="${MAX_PARTICLE_SPEED}" step="0.05" value="${initialState.particleSpeed}" />
-        </div>
-        <div class="range-control">
-          <div class="control-row">
-            <label for="particle-size">Size</label>
-            <output id="particle-size-output">${formatParticleSize(initialState.particleSize)}</output>
+          <div class="range-control">
+            <div class="control-row">
+              <label for="particle-size">Size</label>
+              <output id="particle-size-output">${formatParticleSize(initialState.particleSize)}</output>
+            </div>
+            <input id="particle-size" class="control-slider" type="range" min="${MIN_PARTICLE_SIZE}" max="${MAX_PARTICLE_SIZE}" step="0.001" value="${initialState.particleSize}" />
           </div>
-          <input id="particle-size" class="control-slider" type="range" min="${MIN_PARTICLE_SIZE}" max="${MAX_PARTICLE_SIZE}" step="0.001" value="${initialState.particleSize}" />
-        </div>
-        <div class="range-control">
-          <div class="control-row">
-            <label for="particle-offset">Offset</label>
-            <output id="particle-offset-output">${formatParticleOffset(initialState.particleOffset)}</output>
+          <div class="range-control">
+            <div class="control-row">
+              <label for="particle-offset">Offset</label>
+              <output id="particle-offset-output">${formatParticleOffset(initialState.particleOffset)}</output>
+            </div>
+            <input id="particle-offset" class="control-slider" type="range" min="${MIN_PARTICLE_OFFSET}" max="${MAX_PARTICLE_OFFSET}" step="0.005" value="${initialState.particleOffset}" />
           </div>
-          <input id="particle-offset" class="control-slider" type="range" min="${MIN_PARTICLE_OFFSET}" max="${MAX_PARTICLE_OFFSET}" step="0.005" value="${initialState.particleOffset}" />
-        </div>
-        <div class="range-control">
-          <div class="control-row">
-            <label for="particle-blur">Blur</label>
-            <output id="particle-blur-output">${formatParticleBlur(initialState.particleBlur)}</output>
+          <div class="range-control">
+            <div class="control-row">
+              <label for="particle-blur">Blur</label>
+              <output id="particle-blur-output">${formatParticleBlur(initialState.particleBlur)}</output>
+            </div>
+            <input id="particle-blur" class="control-slider" type="range" min="${MIN_PARTICLE_BLUR}" max="${MAX_PARTICLE_BLUR}" step="0.01" value="${initialState.particleBlur}" />
           </div>
-          <input id="particle-blur" class="control-slider" type="range" min="${MIN_PARTICLE_BLUR}" max="${MAX_PARTICLE_BLUR}" step="0.01" value="${initialState.particleBlur}" />
+          <div class="full-row">
+            <button class="secondary-button" id="reset-sand" type="button">Reset Sand</button>
+          </div>
         </div>
-        <div class="action-row">
-          <button class="secondary-button" id="reset-sand" type="button">Reset Sand</button>
-          <button class="secondary-button" id="renderer-toggle" type="button">Use WebGL2</button>
+        <div id="city-controls" class="view-controls" hidden>
+          <div class="range-control">
+            <div class="control-row">
+              <label for="city-grid">Grid</label>
+              <output id="city-grid-output">${formatCityGrid(initialState.city.grid)}</output>
+            </div>
+            <input id="city-grid" class="control-slider" type="range" min="16" max="160" step="8" value="${initialState.city.grid}" />
+          </div>
+          <div class="range-control">
+            <div class="control-row">
+              <label for="city-lot-fill">Lot fill</label>
+              <output id="city-lot-fill-output">${formatCityFraction(initialState.city.lotFill)}</output>
+            </div>
+            <input id="city-lot-fill" class="control-slider" type="range" min="0.1" max="1" step="0.01" value="${initialState.city.lotFill}" />
+          </div>
+          <div class="range-control">
+            <div class="control-row">
+              <label for="city-height">Height</label>
+              <output id="city-height-output">${formatCityHeight(initialState.city.heightScale)}</output>
+            </div>
+            <input id="city-height" class="control-slider" type="range" min="0.1" max="6" step="0.1" value="${initialState.city.heightScale}" />
+          </div>
+          <div class="range-control">
+            <div class="control-row">
+              <label for="city-band-width">Band width</label>
+              <output id="city-band-width-output">${formatCityFraction(initialState.city.bandWidth)}</output>
+            </div>
+            <input id="city-band-width" class="control-slider" type="range" min="0.02" max="1" step="0.01" value="${initialState.city.bandWidth}" />
+          </div>
+          <div class="full-row">
+            <button class="secondary-button" id="city-invert" type="button" aria-pressed="${initialState.city.invert}">${formatCityInvertLabel(initialState.city.invert)}</button>
+          </div>
         </div>
         <button class="mute-button" id="mute-button" type="button" aria-pressed="${!initialState.muted}">
           <span id="mute-label">${initialState.muted ? "Unmute Tone" : "Mute Tone"}</span>
@@ -105,19 +145,34 @@ export function createInterface(root, initialState, handlers) {
   const blurOutput = root.querySelector("#particle-blur-output");
   const presetStrip = root.querySelector("#preset-strip");
   const resetSandButton = root.querySelector("#reset-sand");
-  const rendererToggle = root.querySelector("#renderer-toggle");
+  const viewSelector = root.querySelector("#view-selector");
+  const viewButtons = Array.from(viewSelector.querySelectorAll("[data-view]"));
+  const sandControls = root.querySelector("#sand-controls");
+  const cityControls = root.querySelector("#city-controls");
+  const cityGridSlider = root.querySelector("#city-grid");
+  const cityGridOutput = root.querySelector("#city-grid-output");
+  const cityLotFillSlider = root.querySelector("#city-lot-fill");
+  const cityLotFillOutput = root.querySelector("#city-lot-fill-output");
+  const cityHeightSlider = root.querySelector("#city-height");
+  const cityHeightOutput = root.querySelector("#city-height-output");
+  const cityBandWidthSlider = root.querySelector("#city-band-width");
+  const cityBandWidthOutput = root.querySelector("#city-band-width-output");
+  const cityInvertButton = root.querySelector("#city-invert");
   const muteButton = root.querySelector("#mute-button");
   const muteLabel = root.querySelector("#mute-label");
   const rendererStatus = root.querySelector("#renderer-status");
 
   let frequencyHz = initialState.frequencyHz;
   let muted = initialState.muted;
+  let cityInvert = initialState.city.invert;
+  let currentView = initialState.view ?? "webgpu";
   let pointerActive = false;
   let controlsBusy = false;
 
   renderTicks(ticks);
   updateFrequencyVisuals(frequencyHz);
   updateStatus(initialState.rendererMode, initialState.isFallback);
+  updateView(currentView);
 
   dial.addEventListener("pointerdown", (event) => {
     pointerActive = true;
@@ -197,7 +252,8 @@ export function createInterface(root, initialState, handlers) {
   });
 
   sceneRoot.addEventListener("click", async (event) => {
-    if (controlsBusy || event.target?.tagName !== "CANVAS") return;
+    // In City view the canvas is for orbiting, not random-preset cycling.
+    if (controlsBusy || currentView === "city" || event.target?.tagName !== "CANVAS") return;
     await applyPresetFrequency(getRandomPresetFrequency(frequencyHz));
   });
 
@@ -235,13 +291,51 @@ export function createInterface(root, initialState, handlers) {
     await resetPromise;
   }
 
-  rendererToggle.addEventListener("click", async () => {
+  viewSelector.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-view]");
+    if (!button || controlsBusy) return;
+    const view = button.dataset.view;
+    if (view === currentView) return;
+
     setControlsBusy(true);
     try {
-      await handlers.onRendererToggle();
+      await handlers.onViewChange?.(view);
     } finally {
       setControlsBusy(false);
     }
+  });
+
+  cityGridSlider.addEventListener("input", () => {
+    cityGridOutput.textContent = formatCityGrid(Number(cityGridSlider.value));
+  });
+
+  // Grid changes rebuild the InstancedMesh, so only commit on release (change).
+  cityGridSlider.addEventListener("change", () => {
+    handlers.onCityGridChange?.(Number(cityGridSlider.value));
+  });
+
+  cityLotFillSlider.addEventListener("input", () => {
+    const value = Number(cityLotFillSlider.value);
+    cityLotFillOutput.textContent = formatCityFraction(value);
+    handlers.onCityLotFillChange?.(value);
+  });
+
+  cityHeightSlider.addEventListener("input", () => {
+    const value = Number(cityHeightSlider.value);
+    cityHeightOutput.textContent = formatCityHeight(value);
+    handlers.onCityHeightChange?.(value);
+  });
+
+  cityBandWidthSlider.addEventListener("input", () => {
+    const value = Number(cityBandWidthSlider.value);
+    cityBandWidthOutput.textContent = formatCityFraction(value);
+    handlers.onCityBandWidthChange?.(value);
+  });
+
+  cityInvertButton.addEventListener("click", () => {
+    cityInvert = !cityInvert;
+    updateCityInvertVisual();
+    handlers.onCityInvertChange?.(cityInvert);
   });
 
   muteButton.addEventListener("click", async () => {
@@ -318,14 +412,51 @@ export function createInterface(root, initialState, handlers) {
       blurSlider.value = blur;
       blurOutput.textContent = formatParticleBlur(blur);
     },
+    updateView,
+    updateCityGrid: (grid) => {
+      cityGridSlider.value = grid;
+      cityGridOutput.textContent = formatCityGrid(Number(grid));
+    },
+    updateCityLotFill: (lotFill) => {
+      cityLotFillSlider.value = lotFill;
+      cityLotFillOutput.textContent = formatCityFraction(Number(lotFill));
+    },
+    updateCityHeight: (heightScale) => {
+      cityHeightSlider.value = heightScale;
+      cityHeightOutput.textContent = formatCityHeight(Number(heightScale));
+    },
+    updateCityBandWidth: (bandWidth) => {
+      cityBandWidthSlider.value = bandWidth;
+      cityBandWidthOutput.textContent = formatCityFraction(Number(bandWidth));
+    },
+    updateCityInvert: (invert) => {
+      cityInvert = Boolean(invert);
+      updateCityInvertVisual();
+    },
     updateStatus
   };
+
+  function updateView(view) {
+    currentView = view ?? currentView;
+    const isCity = currentView === "city";
+    sandControls.hidden = isCity;
+    cityControls.hidden = !isCity;
+    viewButtons.forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.view === currentView);
+      button.setAttribute("aria-pressed", String(button.dataset.view === currentView));
+    });
+  }
+
+  function updateCityInvertVisual() {
+    cityInvertButton.textContent = formatCityInvertLabel(cityInvert);
+    cityInvertButton.setAttribute("aria-pressed", String(cityInvert));
+    cityInvertButton.classList.toggle("is-active", cityInvert);
+  }
 
   function updateStatus(rendererMode, isFallback) {
     particleSlider.max = String(isFallback ? WEBGL_MAX_PARTICLES : WEBGPU_MAX_PARTICLES);
     rendererStatus.textContent = rendererMode;
     rendererStatus.classList.toggle("is-fallback", isFallback);
-    rendererToggle.textContent = isFallback ? "Use WebGPU" : "Use WebGL2";
   }
 
   function setControlsBusy(isBusy) {
@@ -336,7 +467,14 @@ export function createInterface(root, initialState, handlers) {
     offsetSlider.disabled = isBusy;
     blurSlider.disabled = isBusy;
     resetSandButton.disabled = isBusy;
-    rendererToggle.disabled = isBusy;
+    cityGridSlider.disabled = isBusy;
+    cityLotFillSlider.disabled = isBusy;
+    cityHeightSlider.disabled = isBusy;
+    cityBandWidthSlider.disabled = isBusy;
+    cityInvertButton.disabled = isBusy;
+    viewButtons.forEach((button) => {
+      button.disabled = isBusy;
+    });
     presetStrip.querySelectorAll("button").forEach((button) => {
       button.disabled = isBusy;
     });
@@ -441,4 +579,21 @@ function formatParticleOffset(value) {
 
 function formatParticleBlur(value) {
   return `${Math.round(Number(value) * 100)}%`;
+}
+
+function formatCityGrid(value) {
+  const grid = Math.round(Number(value));
+  return `${grid}×${grid}`;
+}
+
+function formatCityFraction(value) {
+  return Number(value).toFixed(2);
+}
+
+function formatCityHeight(value) {
+  return `${Number(value).toFixed(1)}x`;
+}
+
+function formatCityInvertLabel(invert) {
+  return invert ? "Tall in blocks" : "Tall on lines";
 }
