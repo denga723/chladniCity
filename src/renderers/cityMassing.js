@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { FlyControls } from "three/addons/controls/FlyControls.js";
 import { evaluateMixedField } from "../patterns.js";
 
 const PLATE_HALF = 3.15;
@@ -54,13 +55,9 @@ export class CityRenderer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.container.append(this.renderer.domElement);
 
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.08;
-    this.controls.target.set(0, 0, 0);
-    this.controls.maxPolarAngle = Math.PI * 0.49; // keep above the ground plane
-    this.controls.minDistance = 3;
-    this.controls.maxDistance = 20;
+    this.controlMode = "orbit";
+    this._controlsPaused = false;
+    this._setControls("orbit");
 
     this.scene.add(new THREE.AmbientLight(0xffffff, 0.45));
     const key = new THREE.DirectionalLight(0xffffff, 1.1);
@@ -174,8 +171,54 @@ export class CityRenderer {
     }
     this.mesh.instanceMatrix.needsUpdate = true;
 
-    this.controls.update();
+    if (!this._controlsPaused) {
+      // FlyControls integrates movement over time; OrbitControls takes no arg.
+      if (this.controlMode === "fly") this.controls.update(dt);
+      else this.controls.update();
+    }
     this.renderer.render(this.scene, this.camera);
+  }
+
+  _setControls(mode) {
+    if (this.controls) {
+      this.controls.dispose();
+      this.controls = null;
+    }
+    this.controlMode = mode;
+
+    if (mode === "fly") {
+      const fly = new FlyControls(this.camera, this.renderer.domElement);
+      fly.movementSpeed = 4; // world units / second
+      fly.rollSpeed = 0.5;
+      fly.dragToLook = true; // look only while dragging (no pointer lock — iframe-safe)
+      fly.autoForward = false;
+      this.controls = fly;
+    } else {
+      const orbit = new OrbitControls(this.camera, this.renderer.domElement);
+      orbit.enableDamping = true;
+      orbit.dampingFactor = 0.08;
+      orbit.target.set(0, 0.4, 0);
+      orbit.maxPolarAngle = Math.PI * 0.49; // stay above the ground plane
+      orbit.minDistance = 1.5;
+      orbit.maxDistance = 30;
+      orbit.enablePan = true;
+      orbit.screenSpacePanning = false;
+      this.controls = orbit;
+    }
+  }
+
+  setControlMode(mode) {
+    const next = mode === "fly" ? "fly" : "orbit";
+    if (next === this.controlMode) return;
+    this._setControls(next);
+  }
+
+  pauseControls() {
+    this._controlsPaused = true;
+  }
+
+  resumeControls() {
+    this._controlsPaused = false;
   }
 
   // --- City param setters (wired to the UI) ---
@@ -199,26 +242,30 @@ export class CityRenderer {
     this.computeTargetHeights();
   }
 
-  // Render the current massing from a fixed ~30° elevation camera and return a
-  // PNG data URL. Used by the AI stylize panel. Restores the live view after.
-  captureFrame(size = 1024) {
+  // Render the current camera view and return a PNG data URL, preserving the
+  // on-screen aspect ratio. Used by the AI stylize panel. Restores after.
+  captureFrame(maxSize = 1024) {
     const r = this.renderer;
     const prevSize = new THREE.Vector2();
     r.getSize(prevSize);
+    const aspect = Math.max(0.0001, prevSize.x) / Math.max(0.0001, prevSize.y);
 
-    const elev = (30 * Math.PI) / 180;
-    const az = Math.PI * 0.25;
-    const dist = 10.5;
-    const horiz = Math.cos(elev) * dist;
-    const cam = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
-    cam.position.set(Math.cos(az) * horiz, Math.sin(elev) * dist, Math.sin(az) * horiz);
-    cam.lookAt(0, 0.5, 0);
+    let w;
+    let h;
+    if (aspect >= 1) {
+      w = maxSize;
+      h = Math.round(maxSize / aspect);
+    } else {
+      h = maxSize;
+      w = Math.round(maxSize * aspect);
+    }
 
-    r.setSize(size, size, false);
-    r.render(this.scene, cam);
+    // Camera aspect already matches the container (== w/h), so no distortion.
+    r.setSize(w, h, false);
+    r.render(this.scene, this.camera);
     const url = r.domElement.toDataURL("image/png");
 
-    // Restore the on-screen size + camera so the next frame is unaffected.
+    // Restore the on-screen size so the next frame is unaffected.
     r.setSize(prevSize.x, prevSize.y, false);
     r.render(this.scene, this.camera);
     return url;

@@ -141,13 +141,20 @@ async function startApp() {
       appState.city.invert = Boolean(invert);
       activeRenderer?.setInvert?.(appState.city.invert);
     },
+    onCityFlyToggle: (enabled) => {
+      activeRenderer?.setControlMode?.(enabled ? "fly" : "orbit");
+    },
     onStylize: () => {
       stylizer?.open();
     }
   });
 
   stylizer = createStylizer(root, {
-    getFrame: () => activeRenderer?.captureFrame?.(1024) ?? null
+    getFrame: () => activeRenderer?.captureFrame?.(1024) ?? null,
+    // Pause camera controls while the modal is open so typing (e.g. WASD in the
+    // prompt field) doesn't fly the camera in the background.
+    onOpen: () => activeRenderer?.pauseControls?.(),
+    onClose: () => activeRenderer?.resumeControls?.()
   });
 
   activeRenderer = await createAndInitRenderer(ui.sceneRoot, appState, WEBGPU_RENDERER);

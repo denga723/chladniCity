@@ -18,7 +18,7 @@ const DEFAULT_PROMPT =
   "dark tiled ground plane with light trails, 1980s airbrush look. Keep the same building " +
   "layout, skyline silhouette and camera angle as Image 2. High detail, cinematic.";
 
-export function createStylizer(root, { getFrame }) {
+export function createStylizer(root, { getFrame, onOpen, onClose }) {
   let overlay = null;
   let els = null;
 
@@ -191,10 +191,12 @@ export function createStylizer(root, { getFrame }) {
   function open() {
     if (!overlay) build();
     overlay.hidden = false;
+    onOpen?.();
   }
 
   function close() {
     if (overlay) overlay.hidden = true;
+    onClose?.();
   }
 
   return { open, close };

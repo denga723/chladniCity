@@ -120,6 +120,10 @@ export function createInterface(root, initialState, handlers) {
             <button class="secondary-button" id="city-invert" type="button" aria-pressed="${initialState.city.invert}">${formatCityInvertLabel(initialState.city.invert)}</button>
           </div>
           <div class="full-row">
+            <button class="secondary-button" id="city-fly" type="button" aria-pressed="false">Fly mode: Off</button>
+          </div>
+          <p class="city-hint" id="city-fly-hint" hidden>WASD / arrows move · R · F up·down · drag to look</p>
+          <div class="full-row">
             <button class="mute-button" id="city-stylize" type="button">AI Stylize ✨</button>
           </div>
         </div>
@@ -161,6 +165,8 @@ export function createInterface(root, initialState, handlers) {
   const cityBandWidthSlider = root.querySelector("#city-band-width");
   const cityBandWidthOutput = root.querySelector("#city-band-width-output");
   const cityInvertButton = root.querySelector("#city-invert");
+  const cityFlyButton = root.querySelector("#city-fly");
+  const cityFlyHint = root.querySelector("#city-fly-hint");
   const cityStylizeButton = root.querySelector("#city-stylize");
   const muteButton = root.querySelector("#mute-button");
   const muteLabel = root.querySelector("#mute-label");
@@ -169,6 +175,7 @@ export function createInterface(root, initialState, handlers) {
   let frequencyHz = initialState.frequencyHz;
   let muted = initialState.muted;
   let cityInvert = initialState.city.invert;
+  let cityFly = false;
   let currentView = initialState.view ?? "webgpu";
   let pointerActive = false;
   let controlsBusy = false;
@@ -342,9 +349,22 @@ export function createInterface(root, initialState, handlers) {
     handlers.onCityInvertChange?.(cityInvert);
   });
 
+  cityFlyButton.addEventListener("click", () => {
+    setFlyMode(!cityFly);
+    handlers.onCityFlyToggle?.(cityFly);
+  });
+
   cityStylizeButton.addEventListener("click", () => {
     handlers.onStylize?.();
   });
+
+  function setFlyMode(enabled) {
+    cityFly = Boolean(enabled);
+    cityFlyButton.textContent = cityFly ? "Fly mode: On" : "Fly mode: Off";
+    cityFlyButton.setAttribute("aria-pressed", String(cityFly));
+    cityFlyButton.classList.toggle("is-active", cityFly);
+    cityFlyHint.hidden = !cityFly;
+  }
 
   muteButton.addEventListener("click", async () => {
     muted = !muted;
@@ -449,6 +469,8 @@ export function createInterface(root, initialState, handlers) {
     const isCity = currentView === "city";
     sandControls.hidden = isCity;
     cityControls.hidden = !isCity;
+    // A freshly (re)created CityRenderer always starts in orbit mode.
+    if (isCity) setFlyMode(false);
     viewButtons.forEach((button) => {
       button.classList.toggle("is-active", button.dataset.view === currentView);
       button.setAttribute("aria-pressed", String(button.dataset.view === currentView));
